@@ -9,10 +9,12 @@ use Illuminate\Support\Facades\Auth;
 
 class VisitController extends Controller
 {
-   public function index()
+   public function index(Request $request)
     {
+        $orden = $request->input('orden', 'desc');
         $visits = Visit::with('user')->get();
-        return view('visits.index', compact('visits'));
+        $visits = Visit::orderBy('created_at', $orden)->get();
+        return view('visits.index', compact('visits', 'orden'));
     }
 
     public function create()

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\User;
-use Validator;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\ThrottlesLogins;
 use Illuminate\Foundation\Auth\AuthenticatesAndRegistersUsers;
@@ -28,7 +30,7 @@ class AuthController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = '/';
+     protected $redirectTo = '/visits';
 
     /**
      * Create a new authentication controller instance.
@@ -40,33 +42,74 @@ class AuthController extends Controller
         $this->middleware($this->guestMiddleware(), ['except' => 'logout']);
     }
 
-    /**
-     * Get a validator for an incoming registration request.
-     *
-     * @param  array  $data
-     * @return \Illuminate\Contracts\Validation\Validator
-     */
-    protected function validator(array $data)
+      // Mostrar formulario de login
+    public function showLoginForm()
     {
-        return Validator::make($data, [
-            'name' => 'required|max:255',
-            'email' => 'required|email|max:255|unique:users',
-            'password' => 'required|min:6|confirmed',
-        ]);
+        return view('auth.login');
     }
 
-    /**
-     * Create a new user instance after a valid registration.
-     *
-     * @param  array  $data
-     * @return User
-     */
-    protected function create(array $data)
-    {
-        return User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => bcrypt($data['password']),
+    // Procesar login
+
+    public function login(Request $request)   {
+      
+
+        $validator= Validator::make($request->all(),[
+            'email' => 'required|email',
+            'password' => 'required'
         ]);
+        if($validator->fails()){
+            return redirect()->back()
+                            ->withErrors($validator)
+                            ->withInput();
+        }
+          $credentials = $request->only('email', 'password');
+
+        if (Auth::attempt($credentials)) {
+            return redirect()->intended($this->redirectTo);
+        }
+        else{
+            return redirect()->back()->withErrors([
+                'email' => 'Las credenciales no son válidas',
+            ])->withInput();
+        }
     }
+
+    // Mostrar formulario de registro
+    public function showRegistrationForm()
+    {
+        return view('auth.register');
+    }
+
+    // Procesar registro
+    public function register(Request $request)
+    {
+         $validator= Validator::make($request->all(),[
+            'name' => 'required|string|max:255',
+            'email' => 'required|email',
+            'password' => 'required'
+        ]);
+        if($validator->fails()){
+            return redirect()->back()
+                            ->withErrors($validator)
+                            ->withInput();
+        }
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+        ]);
+        $user->save();
+
+        // Redirigir a la vista de éxito
+         return view('auth.register_success');
+    }
+
+    // Logout
+    public function logout()
+    {
+        Auth::logout();
+        return redirect('/');
+    }
+    
 }
